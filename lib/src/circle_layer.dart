@@ -16,8 +16,8 @@ class _CircleLayerState extends State<CircleLayer> {
   final double longitude = 105.804817;
   int circleCount = 0;
   final int targetCircleCount = 100000;
-  final batchSize = 10000;
-  final delay = const Duration(milliseconds: 2);
+  final batchSize = 25000;
+  final delay = const Duration(milliseconds: 1);
   int addRandomCircleTime = 0;
   int addAllCirclesTime = 0;
 
@@ -34,7 +34,7 @@ class _CircleLayerState extends State<CircleLayer> {
     mapController.addCircle(
       CircleOptions(
         geometry: LatLng(randomLat, randomLng),
-        circleColor: 'red',
+        circleColor: listColors[Random().nextInt(3)],
         circleRadius: 8,
       ),
     );
@@ -46,7 +46,6 @@ class _CircleLayerState extends State<CircleLayer> {
 
   Future<void> addAllCircles() async {
     final Stopwatch executionTime = Stopwatch()..start();
-    int pointID = 0;
 
     while (circleCount < targetCircleCount) {
       final remainingCount = targetCircleCount - circleCount;
@@ -55,7 +54,8 @@ class _CircleLayerState extends State<CircleLayer> {
       final circles = List.generate(batchCount, (index) {
         final randomLat = latitude + Random().nextDouble();
         final randomLng = longitude + Random().nextDouble();
-        print('$index\n');
+        final circleId = 'Circle_$circleCount';
+
         return CircleOptions(
           geometry: LatLng(randomLat, randomLng),
           circleColor: listColors[Random().nextInt(3)],
@@ -63,9 +63,29 @@ class _CircleLayerState extends State<CircleLayer> {
         );
       });
 
-      await mapController.addCircles(circles);
+      circles.forEach((circleOption) {
+        mapController.onCircleTapped.add((circleId) {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text('Point info'),
+              content: Text('This is point with ID: ${circleId.toString()}'),
+              actions: [
+                FloatingActionButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Close'),
+                )
+              ],
+            ),
+          );
+        });
+      });
+
+      mapController.addCircles(circles);
       circleCount += batchCount;
-      
+
       await Future.delayed(delay);
     }
 

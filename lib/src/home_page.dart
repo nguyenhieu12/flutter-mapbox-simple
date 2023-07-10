@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:map_tracking/src/change_style.dart';
 import 'package:map_tracking/src/circle_layer.dart';
+import 'package:map_tracking/src/data_from_zdt.dart';
 import 'package:map_tracking/src/zoom_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -69,7 +70,21 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(color: Colors.white, fontSize: 25),
               ),
             ),
-          )
+          ),
+          Container(
+            margin: const EdgeInsets.fromLTRB(40, 20, 30, 10),
+            width: screenWidth,
+            child: FloatingActionButton(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const DataFromJSON()));
+              },
+              backgroundColor: buttonColor,
+              child: const Text(
+                'Data from JSON',
+                style: TextStyle(color: Colors.white, fontSize: 25),
+              ),
+            ),
+          ),
         ]
       ),
     );
