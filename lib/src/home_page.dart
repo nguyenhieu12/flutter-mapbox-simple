@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:map_tracking/src/change_style.dart';
 import 'package:map_tracking/src/circle_layer.dart';
-import 'package:map_tracking/src/data_from_zdt.dart';
+import 'package:map_tracking/src/data_from_json.dart';
 import 'package:map_tracking/src/zoom_page.dart';
 
 class HomePage extends StatefulWidget {

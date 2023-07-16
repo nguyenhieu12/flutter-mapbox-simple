@@ -5,7 +5,7 @@ import 'dart:math';
 
 class CircleLayer extends StatefulWidget {
   const CircleLayer({Key? key}) : super(key: key);
-
+  
   @override
   State<CircleLayer> createState() => _CircleLayerState();
 }
@@ -25,6 +25,10 @@ class _CircleLayerState extends State<CircleLayer> {
 
   void _onMapCreated(MapboxMapController controller) {
     mapController = controller;
+    // mapController.onCircleTapped.add((argument) {
+    //       displayInfo(argument.id);
+    // });
+    // mapController.onFeatureTapped
   }
 
   void addRandomCircle() {
@@ -46,6 +50,7 @@ class _CircleLayerState extends State<CircleLayer> {
 
   Future<void> addAllCircles() async {
     final Stopwatch executionTime = Stopwatch()..start();
+    int id = 0;
 
     while (circleCount < targetCircleCount) {
       final remainingCount = targetCircleCount - circleCount;
@@ -54,7 +59,7 @@ class _CircleLayerState extends State<CircleLayer> {
       final circles = List.generate(batchCount, (index) {
         final randomLat = latitude + Random().nextDouble();
         final randomLng = longitude + Random().nextDouble();
-        final circleId = 'Circle_$circleCount';
+        id = index;
 
         return CircleOptions(
           geometry: LatLng(randomLat, randomLng),
@@ -63,25 +68,7 @@ class _CircleLayerState extends State<CircleLayer> {
         );
       });
 
-      circles.forEach((circleOption) {
-        mapController.onCircleTapped.add((circleId) {
-          showDialog(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: const Text('Point info'),
-              content: Text('This is point with ID: ${circleId.toString()}'),
-              actions: [
-                FloatingActionButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Close'),
-                )
-              ],
-            ),
-          );
-        });
-      });
+      
 
       mapController.addCircles(circles);
       circleCount += batchCount;
@@ -92,6 +79,25 @@ class _CircleLayerState extends State<CircleLayer> {
     setState(() {
       addAllCirclesTime = executionTime.elapsedMilliseconds;
     });
+
+  }
+
+  void displayInfo(circleId) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Point info'),
+        content: Text('This is point with ID: ${circleId.toString()}'),
+        actions: [
+          FloatingActionButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Close'),
+          )
+        ],
+      ),
+    );
   }
 
   @override
@@ -116,14 +122,13 @@ class _CircleLayerState extends State<CircleLayer> {
             height: 520,
             child: MapboxMap(
               accessToken:
-                  'sk.eyJ1IjoiaGlldW5tMTIxMiIsImEiOiJjbGptanBtMmExNmhjM3FrMjE1bHZpdzVmIn0.TwqdH0eYn4xy34qcyFWgkQ',
+              'sk.eyJ1IjoiaGlldW5tMTIxMiIsImEiOiJjbGptanBtMmExNmhjM3FrMjE1bHZpdzVmIn0.TwqdH0eYn4xy34qcyFWgkQ',
               onMapCreated: _onMapCreated,
               styleString: MapboxStyles.MAPBOX_STREETS,
               initialCameraPosition: const CameraPosition(
                 target: LatLng(21.028511, 105.804817),
-                zoom: 6,
+                zoom: 12,
               ),
-              // onStyleLoadedCallback: addAllCircles,
             ),
           ),
           Text(
@@ -134,7 +139,7 @@ class _CircleLayerState extends State<CircleLayer> {
             'Execution time (addAllCircles): $addAllCirclesTime ms',
             style: const TextStyle(fontSize: 18),
           ),
-          const SizedBox(height: 30),  
+          const SizedBox(height: 30),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [

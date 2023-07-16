@@ -38,6 +38,8 @@ dependencies:
   mapbox_gl: ^0.16.0
   http: any
   icons_plus: ^4.0.0
+  flutter_isolate: ^2.0.4
+  geojson: ^1.0.0
 
 dev_dependencies:
   flutter_test:

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'dart:math';
+// import 'dart:math';
 import 'package:flutter/services.dart';
+import 'package:map_tracking/src/circle_layer.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
+import 'package:geojson/geojson.dart';
 
 class DataFromJSON extends StatefulWidget {
   const DataFromJSON({Key? key}) : super(key: key);
@@ -14,7 +16,7 @@ class DataFromJSON extends StatefulWidget {
 class _DataFromJSONState extends State<DataFromJSON> {
   late List<dynamic> jsonData = [];
   late MapboxMapController mapController;
-  int displayDataTime = 0;
+  int addCircleTime = 0;
 
   var listColors = ['red', 'orange', 'lightgreen'];
   
@@ -35,47 +37,52 @@ class _DataFromJSONState extends State<DataFromJSON> {
     }
   }
 
-  void displayData() async {
-    int circleCount = 0;
-    const batchSize = 25000;
-    const delay = Duration(milliseconds: 1);
-    final int targetCircleCount = (jsonData != null ? jsonData.length : 0);
+  void addCircleLayer() async {
+    Stopwatch stopwatch = Stopwatch()..start();
 
-    final Stopwatch executionTime = Stopwatch()..start();
+    try {
+      String jsonString = await rootBundle.loadString('assets/zdt_point_80k.json');
+      List<dynamic> jsonData = json.decode(jsonString);
 
-    while (circleCount < targetCircleCount) {
-      final remainingCount = targetCircleCount - circleCount;
-      final batchCount = min(batchSize, remainingCount);
+      List<Map<String, dynamic>> features = jsonData.map((item) {
+        double lat = item['lat'];
+        double lng = item['lng'];
 
-      final circles = List.generate(batchCount, (index) {
-        return CircleOptions(
-          geometry: LatLng(jsonData[index]['lat'], jsonData[index]['lng']),
-          circleColor: listColors[Random().nextInt(3)],
-          circleRadius: 8,
-        );
-      });
+        return {
+          'type': 'Feature',
+          'properties': {},
+          'geometry': {
+            'type': 'Point',
+            'coordinates': [lng, lat],
+          },
+        };
+      }).toList();
 
-      circles.forEach((id) {
-        mapController.onCircleTapped.add((argument) {
+      Map<String, dynamic> geoJson = {
+        'type': 'FeatureCollection',
+        'features': features,
+      };
 
-        });
-      });
+      mapController.addGeoJsonSource('sourceId', geoJson);
 
-      await mapController.addCircles(circles);
-      circleCount += batchCount;
-      
-      await Future.delayed(delay);
+      mapController.addCircleLayer('sourceId', 'layerId', const CircleLayerProperties(
+        circleColor: 'lightgreen',
+        circleRadius: 8
+      ));
+
+    } catch (e) {
+      debugPrint('Error adding circle layer: $e');
     }
 
     setState(() {
-      displayDataTime = executionTime.elapsedMilliseconds;
+      addCircleTime = stopwatch.elapsedMilliseconds;
     });
   }
 
   @override
   void initState() {
     super.initState();
-    loadJSONData();
+    //loadJSONData();
   }
 
   @override
@@ -105,20 +112,20 @@ class _DataFromJSONState extends State<DataFromJSON> {
               styleString: MapboxStyles.MAPBOX_STREETS,
               initialCameraPosition: const CameraPosition(
                 target: LatLng(21.028511, 105.804817),
-                zoom: 7,
+                zoom: 10,
               ),
               // onStyleLoadedCallback: addAllCircles,
             ),
           ),
           Text(
-            'Execution time (addAllCircles): $displayDataTime ms',
+            'Execution time (addAllCircles): $addCircleTime ms',
             style: const TextStyle(fontSize: 20),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           FloatingActionButton(
                 backgroundColor: Colors.blue,
                 onPressed: () {
-                  displayData();
+                  addCircleLayer();
                 },
                 shape: const CircleBorder(),
                 child: const Icon(

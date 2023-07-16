@@ -1,0 +1,4 @@
+[
+    {"lng":105.86786270141602,"lat":20.861127376556396,"kqi":-82.0,"pCellRsrp":-82.0,"pCellRsrq":-9.0,"pCellId":"84707075","pCellCode":"EHT008873","pDeviceCode":"eHT00887","band":1800.0,"nbCellCode":"","nbCellRsrp":"","nbCellRsrq":"","district":"Thường Tín","province":"Hà Nội","roadSegment":"LINESTRING (105.86785051811235 20.86129456726983, 105.86794283591075 20.861038934490026)","roadInfo":"[Quốc lộ 1, asphalt, trunk, QL.1, 2, yes]","dateHour":"2023-07-04-09"},
+    {"lng":105.87262630462646,"lat":20.843585729599,"kqi":-95.0,"pCellRsrp":-95.0,"pCellRsrq":-8.5,"pCellId":"84525613","pCellCode":"eHT00178Q","pDeviceCode":"eHT00178","band":700.0,"nbCellCode":"","nbCellRsrp":"","nbCellRsrq":"","district":"Thường Tín","province":"Hà Nội","roadSegment":"LINESTRING (105.8726082741628 20.843692050461094, 105.87266804811571 20.843428100901463)","roadInfo":"[Quốc lộ 1, asphalt, trunk, QL.1, 2, yes]","dateHour":"2023-07-05-15"}
+]
