@@ -15,6 +15,8 @@ class DataFromJSON extends StatefulWidget {
 
 class _DataFromJSONState extends State<DataFromJSON> {
   late List<dynamic> jsonData = [];
+  late List<Map<String, dynamic>> features;
+  late Map<String, dynamic> geoJson; 
   late MapboxMapController mapController;
   int addCircleTime = 0;
 
@@ -29,22 +31,9 @@ class _DataFromJSONState extends State<DataFromJSON> {
   void loadJSONData() async {
     try {
       String jsonString = await rootBundle.loadString('assets/zdt_point_80k.json');
-      setState(() {
-        jsonData = json.decode(jsonString);
-      });
-    } catch (e) {
-      debugPrint('Error loading JSON data: $e');
-    }
-  }
-
-  void addCircleLayer() async {
-    Stopwatch stopwatch = Stopwatch()..start();
-
-    try {
-      String jsonString = await rootBundle.loadString('assets/zdt_point_80k.json');
-      List<dynamic> jsonData = json.decode(jsonString);
-
-      List<Map<String, dynamic>> features = jsonData.map((item) {
+      jsonData = json.decode(jsonString);
+      
+      features = jsonData.map((item) {
         double lat = item['lat'];
         double lng = item['lng'];
 
@@ -58,10 +47,43 @@ class _DataFromJSONState extends State<DataFromJSON> {
         };
       }).toList();
 
-      Map<String, dynamic> geoJson = {
+      geoJson = {
         'type': 'FeatureCollection',
         'features': features,
       };
+
+      // mapController.addGeoJsonSource('sourceId', geoJson);
+
+    } catch (e) {
+      debugPrint('Error loading JSON data: $e');
+    }
+  }
+
+  void addCircleLayer() async {
+    Stopwatch stopwatch = Stopwatch()..start();
+
+    try {
+      // String jsonString = await rootBundle.loadString('assets/zdt_point_80k.json');
+      // List<dynamic> jsonData = json.decode(jsonString);
+
+      // List<Map<String, dynamic>> features = jsonData.map((item) {
+      //   double lat = item['lat'];
+      //   double lng = item['lng'];
+
+      //   return {
+      //     'type': 'Feature',
+      //     'properties': {},
+      //     'geometry': {
+      //       'type': 'Point',
+      //       'coordinates': [lng, lat],
+      //     },
+      //   };
+      // }).toList();
+
+      // Map<String, dynamic> geoJson = {
+      //   'type': 'FeatureCollection',
+      //   'features': features,
+      // };
 
       mapController.addGeoJsonSource('sourceId', geoJson);
 
@@ -82,7 +104,7 @@ class _DataFromJSONState extends State<DataFromJSON> {
   @override
   void initState() {
     super.initState();
-    //loadJSONData();
+    loadJSONData();
   }
 
   @override
