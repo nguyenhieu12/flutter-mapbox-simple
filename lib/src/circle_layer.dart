@@ -25,10 +25,6 @@ class _CircleLayerState extends State<CircleLayer> {
 
   void _onMapCreated(MapboxMapController controller) {
     mapController = controller;
-    // mapController.onCircleTapped.add((argument) {
-    //       displayInfo(argument.id);
-    // });
-    // mapController.onFeatureTapped
   }
 
   void addRandomCircle() {
@@ -50,7 +46,6 @@ class _CircleLayerState extends State<CircleLayer> {
 
   Future<void> addAllCircles() async {
     final Stopwatch executionTime = Stopwatch()..start();
-    int id = 0;
 
     while (circleCount < targetCircleCount) {
       final remainingCount = targetCircleCount - circleCount;
@@ -59,7 +54,6 @@ class _CircleLayerState extends State<CircleLayer> {
       final circles = List.generate(batchCount, (index) {
         final randomLat = latitude + Random().nextDouble();
         final randomLng = longitude + Random().nextDouble();
-        id = index;
 
         return CircleOptions(
           geometry: LatLng(randomLat, randomLng),

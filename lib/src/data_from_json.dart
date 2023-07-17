@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-// import 'dart:math';
+import 'dart:math';
 import 'package:flutter/services.dart';
-import 'package:map_tracking/src/circle_layer.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
-import 'package:geojson/geojson.dart';
 
 class DataFromJSON extends StatefulWidget {
   const DataFromJSON({Key? key}) : super(key: key);
@@ -17,6 +15,7 @@ class _DataFromJSONState extends State<DataFromJSON> {
   late List<dynamic> jsonData = [];
   late List<Map<String, dynamic>> features;
   late Map<String, dynamic> geoJson; 
+  late Map<String, dynamic> featuresMap;
   late MapboxMapController mapController;
   int addCircleTime = 0;
 
@@ -26,19 +25,53 @@ class _DataFromJSONState extends State<DataFromJSON> {
 
   void _onMapCreated(MapboxMapController controller) {
     mapController = controller;
+    mapController.onFeatureTapped.add(onFeatureTap);
+  }
+
+  void onFeatureTap(dynamic featureId, Point<double> point, LatLng latLng) {
+
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Point info'),
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Latitude: ${featuresMap[featureId]['lat']}'),
+                Text('Longitude: ${featuresMap[featureId]['lng']}'),
+                Text('District: ${featuresMap[featureId]['district']}'),
+                Text('KQI: ${featuresMap[featureId]['kqi']}'),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Đóng'),
+              ),
+            ],
+          );
+        },
+      );
   }
 
   void loadJSONData() async {
     try {
       String jsonString = await rootBundle.loadString('assets/zdt_point_80k.json');
       jsonData = json.decode(jsonString);
+      featuresMap = { for (var item in jsonData) item['pCellId'] : item };
       
       features = jsonData.map((item) {
         double lat = item['lat'];
         double lng = item['lng'];
+        String id = item['pCellId'];
 
         return {
           'type': 'Feature',
+          'id': id,
           'properties': {},
           'geometry': {
             'type': 'Point',
@@ -52,8 +85,6 @@ class _DataFromJSONState extends State<DataFromJSON> {
         'features': features,
       };
 
-      // mapController.addGeoJsonSource('sourceId', geoJson);
-
     } catch (e) {
       debugPrint('Error loading JSON data: $e');
     }
@@ -63,32 +94,11 @@ class _DataFromJSONState extends State<DataFromJSON> {
     Stopwatch stopwatch = Stopwatch()..start();
 
     try {
-      // String jsonString = await rootBundle.loadString('assets/zdt_point_80k.json');
-      // List<dynamic> jsonData = json.decode(jsonString);
-
-      // List<Map<String, dynamic>> features = jsonData.map((item) {
-      //   double lat = item['lat'];
-      //   double lng = item['lng'];
-
-      //   return {
-      //     'type': 'Feature',
-      //     'properties': {},
-      //     'geometry': {
-      //       'type': 'Point',
-      //       'coordinates': [lng, lat],
-      //     },
-      //   };
-      // }).toList();
-
-      // Map<String, dynamic> geoJson = {
-      //   'type': 'FeatureCollection',
-      //   'features': features,
-      // };
 
       mapController.addGeoJsonSource('sourceId', geoJson);
 
       mapController.addCircleLayer('sourceId', 'layerId', const CircleLayerProperties(
-        circleColor: 'lightgreen',
+        circleColor: 'lightgreen', // < -105 red, -105 -> -101 orange, > -101 lightgreen
         circleRadius: 8
       ));
 
@@ -136,7 +146,6 @@ class _DataFromJSONState extends State<DataFromJSON> {
                 target: LatLng(21.028511, 105.804817),
                 zoom: 10,
               ),
-              // onStyleLoadedCallback: addAllCircles,
             ),
           ),
           Text(
