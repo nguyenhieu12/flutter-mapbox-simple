@@ -13,15 +13,17 @@ class DataFromJSON extends StatefulWidget {
 
 class _DataFromJSONState extends State<DataFromJSON> {
   late List<dynamic> jsonData = [];
-  late List<Map<String, dynamic>> features;
-  late Map<String, dynamic> geoJson; 
+  late Map<String, dynamic> lowKqiGeoJson;
+  late Map<String, dynamic> mediumKqiGeoJson;
+  late Map<String, dynamic> highKqiGeoJson;
   late Map<String, dynamic> featuresMap;
   late MapboxMapController mapController;
+  double lowThreshold = -105.0;
+  double highThreshold = -101.0;
   int addCircleTime = 0;
-
-  var listColors = ['red', 'orange', 'lightgreen'];
-  
-  final delay = const Duration(milliseconds: 1);
+  bool isLowSelected = false;
+  bool isMediumSelected = false;
+  bool isHighSelected = false;
 
   void _onMapCreated(MapboxMapController controller) {
     mapController = controller;
@@ -62,52 +64,137 @@ class _DataFromJSONState extends State<DataFromJSON> {
     try {
       String jsonString = await rootBundle.loadString('assets/zdt_point_80k.json');
       jsonData = json.decode(jsonString);
-      featuresMap = { for (var item in jsonData) item['pCellId'] : item };
-      
-      features = jsonData.map((item) {
-        double lat = item['lat'];
-        double lng = item['lng'];
-        String id = item['pCellId'];
+      featuresMap = { for (var item in jsonData) item['pCellId']: item };
 
-        return {
-          'type': 'Feature',
-          'id': id,
-          'properties': {},
-          'geometry': {
-            'type': 'Point',
-            'coordinates': [lng, lat],
-          },
-        };
-      }).toList();
+      List<Map<String, dynamic>> lowData = [];
+      List<Map<String, dynamic>> mediumData = [];
+      List<Map<String, dynamic>> highData = [];
 
-      geoJson = {
-        'type': 'FeatureCollection',
-        'features': features,
-      };
+      for (var item in jsonData) {
+        double kqi = item['kqi'];
+        if (kqi < -105.0) {
+          lowData.add(item);
+        } else if (kqi >= lowThreshold && kqi <= highThreshold) {
+          mediumData.add(item);
+        } else {
+          highData.add(item);
+        }
+      }
+
+      print('Length of low: ${lowData.length}');
+      print('Length of medium: ${mediumData.length}');
+      print('Length of high: ${highData.length}');
+
+      lowKqiGeoJson = createGeoJson(lowData);
+      mediumKqiGeoJson = createGeoJson(mediumData);
+      highKqiGeoJson = createGeoJson(highData);
 
     } catch (e) {
       debugPrint('Error loading JSON data: $e');
     }
   }
 
-  void addCircleLayer() async {
-    Stopwatch stopwatch = Stopwatch()..start();
+  Map<String, dynamic> createGeoJson(List<Map<String, dynamic>> data) {
+    List<Map<String, dynamic>> features = data.map((item) {
+      double lat = item['lat'];
+      double lng = item['lng'];
+      String id = item['pCellId'];
 
+      return {
+        'type': 'Feature',
+        'id': id,
+        'properties': {},
+        'geometry': {
+          'type': 'Point',
+          'coordinates': [lng, lat],
+        },
+      };
+    }).toList();
+
+    return {
+      'type': 'FeatureCollection',
+      'features': features,
+    };
+  }
+
+  void addLayer(String sourceId, String layerId, Map<String, dynamic> geoJson, String color) async {
+    
     try {
 
-      mapController.addGeoJsonSource('sourceId', geoJson);
+      mapController.addGeoJsonSource(sourceId, geoJson);
 
-      mapController.addCircleLayer('sourceId', 'layerId', const CircleLayerProperties(
-        circleColor: 'lightgreen', // < -105 red, -105 -> -101 orange, > -101 lightgreen
-        circleRadius: 8
+      mapController.addCircleLayer(sourceId, layerId, CircleLayerProperties(
+        circleColor: color, // < -105 red, -105 -> -101 orange, > -101 lightgreen
+        circleRadius: 8,
       ));
 
     } catch (e) {
       debugPrint('Error adding circle layer: $e');
     }
+  }
 
+  void addAllCircleLayers() {
+    if(!isLowSelected && !isMediumSelected && !isHighSelected) {
+      addLayer('lowKqiGeoJson', 'lowLayer', lowKqiGeoJson, 'red');
+      addLayer('mediumKqiGeoJson', 'mediumLayer', mediumKqiGeoJson, 'orange');
+      addLayer('highKqiGeoJson', 'highLayer', highKqiGeoJson, 'lightgreen');
+      setState(() {
+        isLowSelected = !isLowSelected;
+        isMediumSelected = !isMediumSelected;
+        isHighSelected = !isHighSelected;
+      });
+    } else if(!isMediumSelected && !isHighSelected) {
+        addLayer('mediumKqiGeoJson', 'mediumLayer', mediumKqiGeoJson, 'orange');
+        addLayer('highKqiGeoJson', 'highLayer', highKqiGeoJson, 'lightgreen');
+        setState(() {
+          isMediumSelected = !isMediumSelected;
+          isHighSelected = !isHighSelected;
+        });
+    } else if(!isLowSelected && !isHighSelected) {
+        addLayer('lowKqiGeoJson', 'lowLayer', lowKqiGeoJson, 'red');
+        addLayer('highKqiGeoJson', 'highLayer', highKqiGeoJson, 'lightgreen');
+        setState(() {
+          isLowSelected = !isLowSelected;
+          isHighSelected = !isHighSelected;
+        });
+    } else if(!isLowSelected && !isMediumSelected) {
+        addLayer('lowKqiGeoJson', 'lowLayer', lowKqiGeoJson, 'red');
+        addLayer('mediumKqiGeoJson', 'mediumLayer', mediumKqiGeoJson, 'orange');
+        setState(() {
+          isLowSelected = !isLowSelected;
+          isMediumSelected = !isMediumSelected;
+        });
+    } else if(!isLowSelected) {
+        addLayer('lowKqiGeoJson', 'lowLayer', lowKqiGeoJson, 'red');
+        setState(() {
+          isLowSelected = !isLowSelected;
+        });
+    } else if(!isMediumSelected) {
+        addLayer('mediumKqiGeoJson', 'mediumLayer', mediumKqiGeoJson, 'orange');
+        setState(() {
+          isMediumSelected = !isMediumSelected;
+        });
+    } else if(!isHighSelected) {
+        addLayer('highKqiGeoJson', 'highLayer', highKqiGeoJson, 'lightgreen');
+        setState(() {
+          isHighSelected = !isHighSelected;
+        });
+    } else {
+      return;
+    }
+  }
+
+  void removeAllCircleLayers() {
+    mapController.removeLayer('lowLayer');
+    mapController.removeLayer('mediumLayer');
+    mapController.removeLayer('highLayer');
+    mapController.removeSource('lowKqiGeoJson');
+    mapController.removeSource('mediumKqiGeoJson');
+    mapController.removeSource('highKqiGeoJson');
     setState(() {
-      addCircleTime = stopwatch.elapsedMilliseconds;
+      isLowSelected = !isLowSelected;
+      isMediumSelected = !isMediumSelected;
+      isHighSelected = !isHighSelected;
     });
   }
 
@@ -148,23 +235,153 @@ class _DataFromJSONState extends State<DataFromJSON> {
               ),
             ),
           ),
-          Text(
-            'Execution time (addAllCircles): $addCircleTime ms',
-            style: const TextStyle(fontSize: 20),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-                backgroundColor: Colors.blue,
-                onPressed: () {
-                  addCircleLayer();
-                },
-                shape: const CircleBorder(),
-                child: const Icon(
-                  Icons.add_circle_outline_rounded,
-                  size: 34,
-                  color: Colors.white,
-                ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Column(
+                children: [
+                  FloatingActionButton(
+                    backgroundColor: Colors.blue,
+                    onPressed: () {
+                      addAllCircleLayers();
+                    },
+                    shape: const CircleBorder(),
+                    child: const Icon(
+                      Icons.add_circle_outline_rounded,
+                        size: 30,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    FloatingActionButton(
+                    backgroundColor: Colors.blue,
+                    onPressed: () {
+                      removeAllCircleLayers();
+                    },
+                    shape: const CircleBorder(),
+                    child: const Icon(
+                      Icons.remove_circle_outline_rounded,
+                        size: 30,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    FloatingActionButton(
+                    backgroundColor: Colors.blue,
+                    onPressed: () {
+                      
+                    },
+                    shape: const CircleBorder(),
+                    child: const Icon(
+                      Icons.filter_alt_outlined,
+                        size: 30,
+                        color: Colors.white,
+                      ),
+                    ),
+                ],
+              ),
+              Column(
+                children: [
+                  Row(
+                    children: [
+                      const Text('Low kqi',
+                      style: TextStyle(
+                        fontSize: 18
+                      
+                      ),
+                    ),
+                    Checkbox(
+                      checkColor: Colors.white,
+                      value: isLowSelected,
+                      onChanged: (bool? value) {
+                        if(!isLowSelected) {
+                          addLayer('lowqiGeoJson', 'lowLayer', mediumKqiGeoJson, 'red');
+                          setState(() {
+                            isLowSelected = !isLowSelected;
+                          });
+                        } else {
+                          mapController.removeLayer('lowLayer');
+                          mapController.removeSource('lowqiGeoJson');
+                          setState(() {
+                            isLowSelected = !isLowSelected;
+                          });
+                        }
+                      },
+                    )
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      const Text('Medium kqi',
+                      style: TextStyle(
+                        fontSize: 18
+                      
+                      ),
+                    ),
+                    Checkbox(
+                      checkColor: Colors.white,
+                      value: isMediumSelected,
+                      onChanged: (bool? value) {
+                        if(!isMediumSelected) {
+                          addLayer('mediumKqiGeoJson', 'mediumLayer', mediumKqiGeoJson, 'orange');
+                          setState(() {
+                            isMediumSelected = !isMediumSelected;
+                          });
+                        } else {
+                          mapController.removeLayer('mediumLayer');
+                          mapController.removeSource('mediumKqiGeoJson');
+                          setState(() {
+                            isMediumSelected = !isMediumSelected;
+                          });
+                        }
+                      },
+                    )
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      const Text('High kqi',
+                      style: TextStyle(
+                        fontSize: 18
+                      
+                      ),
+                    ),
+                    Checkbox(
+                      checkColor: Colors.white,
+                      value: isHighSelected,
+                      onChanged: (bool? value) {
+                        if(!isHighSelected) {
+                          addLayer('highKqiGeoJson', 'highLayer', highKqiGeoJson, 'lightgreen');
+                          setState(() {
+                            isHighSelected = !isHighSelected;
+                          });
+                        } else {
+                          mapController.removeLayer('highLayer');
+                          mapController.removeSource('highKqiGeoJson');
+                          setState(() {
+                            isHighSelected = !isHighSelected;
+                          });
+                        }
+                      },
+                    )
+                    ],
+                  ),
+                ],
               )
+              // FloatingActionButton(
+              //   backgroundColor: Colors.blue,
+              //   onPressed: () {
+              //     removeAllCircleLayers();
+              //   },
+              //   shape: const CircleBorder(),
+              //   child: const Icon(
+              //     Icons.filter_alt_rounded,
+              //       size: 34,
+              //       color: Colors.white,
+              //     ),
+              //   ),
+            ],
+          )
         ],
       ),
     );
