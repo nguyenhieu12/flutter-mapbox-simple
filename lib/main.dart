@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:map_tracking/src/home_page.dart';
+import 'package:map_tracking/pages/home_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
