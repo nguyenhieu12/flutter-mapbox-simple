@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_gl/mapbox_gl.dart';
 import 'package:flutter/services.dart';
@@ -14,47 +14,84 @@ class VietnamMap extends StatefulWidget {
 class _VietnamMapState extends State<VietnamMap> {
   late MapboxMapController mapController;
   late Map<String, dynamic> geoJsonData;
-  List<dynamic> mapData = [];
+  String oldId = '';
   late Map<String, dynamic> provinceData;
+  Uuid uuid = const Uuid();
 
   void _onMapCreated(MapboxMapController controller) {
     mapController = controller;
     initMap();
+    
     mapController.onFeatureTapped.add((id, point, coordinates) {
-      debugPrint('Current ID: $id');
+      print('Current ID: $id');
+      print('Current ID string: $oldId');
+      handleProvinceTapped(id);
     });
   }
 
-  void displayProvinceInfo(dynamic id) {
-    var data = mapData[id];
-    print(data);
-    // var featureData;
-    // showDialog(
-    //     context: context,
-    //     builder: (BuildContext context) {
-    //       return AlertDialog(
-    //         title: const Text('Point info'),
-    //         content: Column(
-    //           crossAxisAlignment: CrossAxisAlignment.start,
-    //           mainAxisSize: MainAxisSize.min,
-    //           children: [
-    //             Text('Latitude: ${featureData['lat']}'),
-    //             Text('Longitude: ${featureData['lng']}'),
-    //             Text('District: ${featureData['district']}'),
-    //             Text('KQI: ${featureData['kqi']}'),
-    //           ],
-    //         ),
-    //         actions: [
-    //           ElevatedButton(
-    //             onPressed: () {
-    //               Navigator.of(context).pop();
-    //             },
-    //             child: const Text('Đóng'),
-    //           ),
-    //         ],
-    //       );
-    //     },
-    //   );
+  void handleProvinceTapped(dynamic id) {
+    
+    if (oldId.isEmpty) {
+      updateLayer(id);
+    } else {
+      removeAndRenderLayer(id);
+    }
+  }
+
+  void removeAndRenderLayer(id) {
+
+    mapController.removeLayer('layerId-$id');
+    mapController.removeSource('sourceId-$id');
+
+    mapController.removeLayer('layerId-$oldId');
+    mapController.removeSource('sourceId-$oldId');
+
+    Map<String, dynamic> oldFeatureCollection = {
+      "type": "FeatureCollection",
+      "features": [provinceData[oldId]],
+    };
+
+    mapController.addGeoJsonSource('sourceId-$oldId', oldFeatureCollection);
+    mapController.addLayer('sourceId-$oldId', 'layerId-$oldId', const FillLayerProperties(
+      fillColor: 'lightgreen',
+      fillOutlineColor: 'red',
+    ));
+
+    Map<String, dynamic> currentFeatureCollection = {
+      "type": "FeatureCollection",
+      "features": [provinceData[id]],
+    };
+
+    mapController.addGeoJsonSource('sourceId-$id', currentFeatureCollection);
+    mapController.addLayer('sourceId-$id', 'layerId-$id', const FillLayerProperties(
+      fillColor: 'yellow',
+      fillOutlineColor: 'red',
+    ));
+
+    oldId = id;
+  }
+
+  void updateLayer(dynamic id) {
+    
+    mapController.removeLayer('layerId-$id');
+    mapController.removeSource('sourceId-$id');
+    
+
+    Map<String, dynamic> featureCollection = {
+      "type": "FeatureCollection",
+      "features": [provinceData[id]],
+    };
+
+    mapController.addGeoJsonSource('sourceId-$id', featureCollection);
+    mapController.addLayer('sourceId-$id', 'layerId-$id', const FillLayerProperties(
+      fillColor: 'yellow',
+      fillOutlineColor: 'red',
+    ));
+
+    setState(() {
+      oldId = id;
+    });
+
   }
 
   void initMap() async {
@@ -64,36 +101,33 @@ class _VietnamMapState extends State<VietnamMap> {
 
       List<dynamic> features = geoJsonData['features'];
 
-      List<Map<String, dynamic>> layerData = [];
-
-      for(int i = 0; i < features.length; i++) {
-        layerData.add(
-          {
-            "type": "FeatureCollection",
-            "features": features[i]
-          }
-        );     
+      for (int i = 0; i < features.length; i++) {
+        features[i]['id'] = uuid.v4();
       }
 
-      for(int i = 0; i < layerData.length; i++) {
-        mapController.addGeoJsonSource('sourceId$i', 
-          layerData[i]
-        );
+      geoJsonData['features'] = features;
 
-        mapController.addLayer('sourceId$i', 'layerId$i', const FillLayerProperties(
+      provinceData = { for (var item in geoJsonData['features']) item['id'] : item };
+
+      for (int i = 0; i < features.length; i++) {
+        Map<String, dynamic> feature = features[i];
+        List<Map<String, dynamic>> featureList = [feature];
+
+        Map<String, dynamic> featureCollection = {
+          "type": "FeatureCollection",
+          "features": featureList,
+        };
+
+        mapController.addGeoJsonSource('sourceId-${feature['id']}', featureCollection);
+
+        mapController.addLayer('sourceId-${feature['id']}', 'layerId-${feature['id']}', const FillLayerProperties(
           fillColor: 'lightgreen',
-          fillOutlineColor: 'red'
-        ));     
+          fillOutlineColor: 'red',
+        ));
+
+        print('Add layer $i success');
       }
-
-      // for (int i = 0; i < features.length; i++) {
-      //   features[i]['id'] = features[i]['properties']['Name'];
-      //   //todo
-      // }
-
-      // geoJsonData['features'] = features;
-
-    } catch(e) {
+    } catch (e) {
       debugPrint('Error adding layer: $e');
     }
   }
