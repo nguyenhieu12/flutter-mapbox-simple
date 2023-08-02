@@ -78,8 +78,8 @@ class _DataFromJSONState extends State<DataFromJSON> {
   }
 
   Future<void> loadGeoJson() async {
-    print('Initial low threshold: $lowThreshold');
-    print('Initial high threshold: $highThreshold');
+    debugPrint('Initial low threshold: $lowThreshold');
+    debugPrint('Initial high threshold: $highThreshold');
 
     for (var item in jsonData) {
      double kqi = item['kqi'];
@@ -92,9 +92,9 @@ class _DataFromJSONState extends State<DataFromJSON> {
       }
     }   
 
-    print('Length of low: ${lowData.length}');
-    print('Length of medium: ${mediumData.length}');
-    print('Length of high: ${highData.length}');
+    debugPrint('Length of low: ${lowData.length}');
+    debugPrint('Length of medium: ${mediumData.length}');
+    debugPrint('Length of high: ${highData.length}');
 
     lowKqiGeoJson = createGeoJson(lowData);
     mediumKqiGeoJson = createGeoJson(mediumData);
@@ -252,9 +252,9 @@ class _DataFromJSONState extends State<DataFromJSON> {
                         } else {
                           
                           setState(() {
-                            print('Old low threshold: $lowThreshold');
+                            debugPrint('Old low threshold: $lowThreshold');
                             lowThreshold = newValue;
-                            print('New low threshold: $lowThreshold');
+                            debugPrint('New low threshold: $lowThreshold');
                           });
                         }
                       },
@@ -277,9 +277,9 @@ class _DataFromJSONState extends State<DataFromJSON> {
                           });
                         } else {
                           setState(() {
-                            print('Old high threshold: $highThreshold');
+                            debugPrint('Old high threshold: $highThreshold');
                             highThreshold = newValue;
-                            print('New high threshold: $highThreshold');
+                            debugPrint('New high threshold: $highThreshold');
                           });
                         }
                       },
