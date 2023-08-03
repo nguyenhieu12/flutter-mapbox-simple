@@ -15,12 +15,14 @@ class _VietnamMapState extends State<VietnamMap> {
   late MapboxMapController mapController;
   late Map<String, dynamic> geoJsonData;
   String oldId = '';
-  late Map<String, dynamic> provinceData;
+  Map<String, dynamic> provinceData = {};
   Uuid uuid = const Uuid();
   bool _isNorthDomainSelected = false;
   bool _isCentralDomainSelected = false;
   bool _isSouthDomainSelected = false;
   bool _isAllDomainsSeletecd = false;
+  List<dynamic> domainName = ['Miền Bắc', 'Miền Trung', 'Miền Nam'];
+  Map<String, dynamic> geoJsonByDomain = {};
   
 
   void _onMapCreated(MapboxMapController controller) {
@@ -28,11 +30,46 @@ class _VietnamMapState extends State<VietnamMap> {
     initMap();
     
     mapController.onFeatureTapped.add((id, point, coordinates) {
+      // debugPrint('Province: ${provinceData[id]['properties']['Name_VI']}');
       handleProvinceTapped(id);
     });
   }
 
   void handleProvinceTapped(dynamic id) {
+
+    showModalBottomSheet(
+      context: context,
+      builder: ((context) {
+        return Container(
+          height: 100,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20)
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              const Center(
+                child: Text('Thông tin tỉnh',
+                  style: TextStyle(
+                    fontSize: 22
+                  ),
+                ),
+              ),
+              Center(
+                child: Text('Tỉnh: ${provinceData[id]['properties']['Name_VI']}',
+                  style: const TextStyle(
+                    fontSize: 20
+                  ),
+                ),
+              )
+            ]
+          ),
+        );
+      }),
+    );
+
     if (oldId.isEmpty) {
       updateLayer(id);
     }
@@ -55,7 +92,7 @@ class _VietnamMapState extends State<VietnamMap> {
 
     mapController.addGeoJsonSource('sourceId-$id', currentFeatureCollection);
     mapController.addLayer('sourceId-$id', 'layerId-$id', const FillLayerProperties(
-      fillColor: 'lightgreen',
+      fillColor: 'red',
       fillOutlineColor: 'black',
     ));
 
@@ -69,7 +106,7 @@ class _VietnamMapState extends State<VietnamMap> {
 
     mapController.addGeoJsonSource('sourceId-$oldId', oldFeatureCollection);
     mapController.addLayer('sourceId-$oldId', 'layerId-$oldId', const FillLayerProperties(
-      fillColor: 'grey',
+      fillColor: 'lightgrey',
       fillOutlineColor: 'black',
     ));
 
@@ -89,9 +126,12 @@ class _VietnamMapState extends State<VietnamMap> {
 
     mapController.addGeoJsonSource('sourceId-$id', featureCollection);
     mapController.addLayer('sourceId-$id', 'layerId-$id', const FillLayerProperties(
-      fillColor: 'lightgreen',
+      fillColor: 'red',
       fillOutlineColor: 'black',
     ));
+
+    debugPrint('BBB: sourceId-$id');
+    debugPrint('BBB: layerId-$id');
 
     setState(() {
       oldId = id;
@@ -110,45 +150,49 @@ class _VietnamMapState extends State<VietnamMap> {
         features[i]['id'] = uuid.v4();
       }
 
-      // geoJsonData['features'] = features;
+      geoJsonData['features'] = features;
 
-      provinceData = { for (var item in features) item['id'] : item };
+      provinceData = { for (var item in geoJsonData['features']) item['id'] : item };
 
       String domains = await rootBundle.loadString('assets/province_domain.json');
 
       Map<String, dynamic> domaninsData = json.decode(domains);
 
-      List<dynamic> domainName = ['Miền Bắc', 'Miền Trung', 'Miền Nam'];
-
-      List<dynamic> provinces = [];
+      List<List<dynamic>> provinces = [];
 
       for(int i = 0; i < domainName.length; i++) {
         provinces.add(domaninsData[domainName[i]]);
       }
 
-      // for(int i = 0; i < provinces.length; i++) {
-      //   for(int j = 0; j < features.length; j++) {
-      //     if()
-      //   }
-      // }
+      for(int i = 0; i < provinces.length; i++) {
+        List<Map<String, dynamic>> listFeatures = [];
 
-      for (int i = 0; i < features.length; i++) {
-        Map<String, dynamic> feature = features[i];
-        List<Map<String, dynamic>> featureList = [feature];
+        for(int j = 0; j < provinces[i].length; j++) {
+          for(int k = 0; k < features.length; k++) {
+            if(provinces[i][j] == features[k]['properties']['Name_VI']) {
+              listFeatures.add(features[k]);
+            }
+          }
+        }
 
         Map<String, dynamic> featureCollection = {
           "type": "FeatureCollection",
-          "features": featureList,
+          "features": listFeatures,
         };
 
-        mapController.addGeoJsonSource('sourceId-${feature['id']}', featureCollection);
+        geoJsonByDomain[domainName[i]] = listFeatures;
 
-        mapController.addLayer('sourceId-${feature['id']}', 'layerId-${feature['id']}', const FillLayerProperties(
-          fillColor: 'grey',
+        await mapController.addGeoJsonSource('sourceId-${domainName[i]}', featureCollection);
+
+        await mapController.addLayer('sourceId-${domainName[i]}', 'layerId-${domainName[i]}', const FillLayerProperties(
+          fillColor: 'lightgrey',
           fillOutlineColor: 'black',
         ));
 
+        debugPrint('AAA: sourceId-${domainName[i]}');
+        debugPrint('AAA: layerId-${domainName[i]}');
       }
+
     } catch (e) {
       debugPrint('Error adding layer: $e');
     }
@@ -156,36 +200,22 @@ class _VietnamMapState extends State<VietnamMap> {
 
   void filterAndRemoveByDomain(String domain, String? color) async {
     
-    String domains = await rootBundle.loadString('assets/province_domain.json');
+    await mapController.removeLayer('layerId-$domain');
+    await mapController.removeSource('sourceId-$domain');
 
-    Map<String, dynamic> domaninsData = json.decode(domains);
+    Map<String, dynamic> featureCollection = {
+      "type": "FeatureCollection",
+      "features": geoJsonByDomain[domain],
+    };
 
-    List<dynamic> provinces = domaninsData[domain];
+    await mapController.addGeoJsonSource('sourceId-$domain', featureCollection);
+    await mapController.addLayer('sourceId-$domain', 'layerId-$domain', FillLayerProperties(
+      fillColor: (color ?? ((domain == 'Miền Bắc') ? 'lightgreen' : (domain == 'Miền Trung' ? 'lightyellow' : 'lightpink'))) ,
+      fillOutlineColor: 'black',
+    ));
 
-    List<dynamic> features = geoJsonData['features'];
-
-    for(int i = 0; i < provinces.length; i++) { 
-      for(int j = 0; j < features.length; j++) {
-        if(provinces[i] == features[j]['properties']['Name_VI']) {
-          
-          String id = features[j]['id'];
-
-          await mapController.removeLayer('layerId-$id');
-          await mapController.removeSource('sourceId-$id');
-
-          Map<String, dynamic> currentFeatureCollection = {
-            "type": "FeatureCollection",
-            "features": [provinceData[id]],
-          };
-
-          await mapController.addGeoJsonSource('sourceId-$id', currentFeatureCollection);
-          await mapController.addLayer('sourceId-$id', 'layerId-$id', FillLayerProperties(
-            fillColor: (color ?? ((domain == 'Miền Bắc') ? 'lightgreen' : (domain == 'Miền Trung' ? 'lightyellow' : 'lightpink'))) ,
-            fillOutlineColor: 'black',
-          ));
-        }
-      }    
-    }
+    oldId = '';
+    
   }
 
   void displayMenuOptions() {
@@ -217,12 +247,15 @@ class _VietnamMapState extends State<VietnamMap> {
                       if(!_isNorthDomainSelected) {
                         filterAndRemoveByDomain('Miền Bắc', null);
                         _isNorthDomainSelected = value!;
+                        if(_isCentralDomainSelected && _isSouthDomainSelected) {
+                          _isAllDomainsSeletecd = value;
+                        }
                         setState(() {
                           Navigator.pop(context);
                           displayMenuOptions();
                         });
                       } else {
-                        filterAndRemoveByDomain('Miền Bắc', 'grey');
+                        filterAndRemoveByDomain('Miền Bắc', 'lightgrey');
                         _isNorthDomainSelected = value!;
                         _isAllDomainsSeletecd = value;
                         setState(() {
@@ -249,12 +282,15 @@ class _VietnamMapState extends State<VietnamMap> {
                       if(!_isCentralDomainSelected) {
                         filterAndRemoveByDomain('Miền Trung', null);
                         _isCentralDomainSelected = value!;
+                        if(_isNorthDomainSelected && _isSouthDomainSelected) {
+                          _isAllDomainsSeletecd = value;
+                        }
                         setState(() {
                           Navigator.pop(context);
                           displayMenuOptions();
                         });
                       } else {
-                        filterAndRemoveByDomain('Miền Trung', 'grey');
+                        filterAndRemoveByDomain('Miền Trung', 'lightgrey');
                         _isCentralDomainSelected = value!;
                         _isAllDomainsSeletecd = value;
                         setState(() {
@@ -281,12 +317,15 @@ class _VietnamMapState extends State<VietnamMap> {
                       if(!_isSouthDomainSelected) {
                         filterAndRemoveByDomain('Miền Nam', null);
                         _isSouthDomainSelected = value!;
+                        if(_isNorthDomainSelected && _isCentralDomainSelected) {
+                          _isAllDomainsSeletecd = value;
+                        }
                         setState(() {
                           Navigator.pop(context);
                           displayMenuOptions();
                         });
                       } else {
-                        filterAndRemoveByDomain('Miền Nam', 'grey');
+                        filterAndRemoveByDomain('Miền Nam', 'lightgrey');
                         _isSouthDomainSelected = value!;
                         _isAllDomainsSeletecd = value;
                         setState(() {
@@ -323,9 +362,9 @@ class _VietnamMapState extends State<VietnamMap> {
                           displayMenuOptions();
                         });
                       } else {
-                        filterAndRemoveByDomain('Miền Bắc', 'grey');
-                        filterAndRemoveByDomain('Miền Trung', 'grey');
-                        filterAndRemoveByDomain('Miền Nam', 'grey');
+                        filterAndRemoveByDomain('Miền Bắc', 'lightgrey');
+                        filterAndRemoveByDomain('Miền Trung', 'lightgrey');
+                        filterAndRemoveByDomain('Miền Nam', 'lightgrey');
                         _isNorthDomainSelected = value!;
                         _isCentralDomainSelected = value;
                         _isSouthDomainSelected = value;
@@ -370,6 +409,7 @@ class _VietnamMapState extends State<VietnamMap> {
   @override
   Widget build(BuildContext context) {
     double screenWitdh = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: AppBar(
@@ -385,14 +425,122 @@ class _VietnamMapState extends State<VietnamMap> {
       ),
       body: Stack(
         children: [
-          MapboxMap(
-            accessToken: 'sk.eyJ1IjoiaGlldW5tMTIxMiIsImEiOiJjbGptanBtMmExNmhjM3FrMjE1bHZpdzVmIn0.TwqdH0eYn4xy34qcyFWgkQ',
-            styleString: 'mapbox://styles/hieunm1212/clkq6rt3s00cb01ph7e3z6dtx',
-            initialCameraPosition: const CameraPosition(
-              target: LatLng(16.102622, 105.690185),
-              zoom: 5
-            ),
-            onMapCreated: _onMapCreated,
+          Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              SizedBox(
+                height: screenHeight * 0.75,
+                child: MapboxMap(
+                  accessToken: 'sk.eyJ1IjoiaGlldW5tMTIxMiIsImEiOiJjbGptanBtMmExNmhjM3FrMjE1bHZpdzVmIn0.TwqdH0eYn4xy34qcyFWgkQ',
+                  styleString: 'mapbox://styles/hieunm1212/clkq6rt3s00cb01ph7e3z6dtx',
+                  initialCameraPosition: const CameraPosition(
+                    target: LatLng(15.102622, 105.690185),
+                    zoom: 4.6
+                  ),
+                  onMapCreated: _onMapCreated,
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Row(    
+                    children: [
+                      Container(
+                        width: 15,
+                        height: 15,
+                        decoration: const BoxDecoration(
+                          color: Color.fromARGB(255, 158, 255, 47),
+                          shape: BoxShape.circle
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      const Text('Miền Bắc',
+                        style: TextStyle(
+                          fontSize: 18
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 15,
+                        height: 15,
+                        decoration: const BoxDecoration(
+                          color: Color.fromARGB(255, 255, 230, 44),
+                          shape: BoxShape.circle
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      const Text('Miền Trung',
+                        style: TextStyle(
+                          fontSize: 18
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 15,
+                        height: 15,
+                        decoration: const BoxDecoration(
+                          color: Color.fromARGB(97, 255, 94, 118),
+                          shape: BoxShape.circle
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      const Text('Miền Nam',
+                        style: TextStyle(
+                          fontSize: 18
+                        ),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 15,
+                        height: 15,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      const Text('Được chọn',
+                        style: TextStyle(
+                          fontSize: 18
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 15,
+                        height: 15,
+                        decoration: const BoxDecoration(
+                          color: Colors.grey,
+                          shape: BoxShape.circle
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      const Text('Không được chọn',
+                        style: TextStyle(
+                          fontSize: 18
+                        ),
+                      ),
+                    ],
+                  )
+                ],
+              )
+            ],
           ),
           Align(
             alignment: Alignment.topRight,
