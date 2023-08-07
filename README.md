@@ -1,16 +1,11 @@
-# map_tracking
+# Mapbox simple app
 
-A new Flutter project.
+This project aims to learn the basics of mapbox_gl in Flutter.
 
-## Getting Started
+# Features
 
-This project is a starting point for a Flutter application.
+- Zoom in, zoom out
+- Change map style
+- Add layer
 
-A few resources to get you started if this is your first Flutter project:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
